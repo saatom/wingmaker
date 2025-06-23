@@ -18,33 +18,56 @@ function [shape, mcl]=airfoilgen(ident)
 		elseif m==0 %symmetrical airfoil
 		    yc=@(x) x.*0;
 		    dycdx=@(x) x.*0;
-		    theta=@(x) x.*0;
 		else %cambered airfoil
 		    yc=@(x) (x<=p).*(m/p^2.*(2*p.*x-x.^2)) + (x>p).*(m/(1-p)^2).*((1-2*p)+2*p.*x-x.^2); %equation for MCL
 		    dycdx=@(x) (x<=p).*(2*m/p^2*(p-x)) + (x>p).*(2*(m/(1-p^2)*(p-x))); %derivative of the MCL
-		    theta=@(x) atan(dycdx(x)); %finding the slope in radians of the MCL
 		end
-		yt=@(x) 5*t*(.2969*sqrt(x)-.1260*x-.3516*x.^2+.2843*x.^3-.1015*x.^4);
-		xu=@(x) x-yt(x).*sin(theta(x));
-		xl=@(x) x+yt(x).*sin(theta(x));
-		yu=@(x) yc(x)+yt(x).*cos(theta(x));
-		yl=@(x) yc(x)-yt(x).*cos(theta(x));
-
-		xs=linspace(0,1,50); %x values for sampling the MCL
-
-		shape=[xu(xs.^2)' yu(xs.^2)'; xl((1-xs).^2)' yl((1-xs).^2)']; %squaring the x indices to have more points at the sharper curves of the airfoil (toward the leading edge)
-		mcl=[xs' yc(xs)'];	
 	    case 5 %NACA 5-series airfoil (e.g. NACA 23012)
+		prof=str2num(nums(1:3)) %camber profile for determining coefficients
+		s=str2num(nums(3)); %string index
+		t=str2num(nums(4:5))/100 %max thickness
+		if s==0 %simple camber
+		    coeffs=[ %non-reflexed camber coefficients
+		    210 .05 .0580 361.40; %camber line profile, p, r, k1
+		    220 .1 .126 51.640;
+		    230 .15 .2025 15.957;
+		    240 .2 .29 6.643;
+		    250 .25 .391 3.23];
+		    index=find(coeffs==prof);
+		    coeflist=coeffs(index,:); %getting the line in the above matrix with the relevant coefficients
+		    p=coeflist(2); r=coeflist(3); k1=coeflist(4); %finding coefficients
 
+		    yc=@(x) (x<r).*(k1/6*(x.^3-3*r.*x.^2+r.^2*(3-r).*x)) + (x>=r).*(k1*r^3/6*(1-x)); %mcl equation	
+		    dycdx=@(x) (x<r).*(k1/6*(3*x.^2-6*r.*x+r^2*(3-r))) + (x>=r).*(-k1*r^3/6); %mcl gradient
+		elseif s==1 %reflexed camber
+		    coeffs=[ %reflexed camber coefficients
+		    221 .1 .13 51.99 7.64e-4; %camber line profile, p, r, k1, k2/k1
+		    231 .15 .216 15.793 6.77e-3;
+		    241 .2 .318 6.52 3.03e-2;
+		    251 .25 .441 3.101 1.355e-1
+		    ];
+		    index=find(coeffs==prof);
+		    coeflist=coeffs(index,:); %getting the line in the above matrix with the relevant coefficients
+		    p=coeflist(2); r=coeflist(3); k1=coeflist(4); k2=k1*coeflist(5); %finding coefficients
+		    yc=@(x) (x<r).*(k1/6*((x-r).^3-k2/k1*(1-r)^3*x-r^3*x+r^3)) + (x>=r).*(k1/6*(k2/k1*(x-r).^3-k2/k1*(1-r)^3*x-r^3*x+r^3));
+		    dycdx=@(x) (x<r).*(k1 .* (-r .^ 3 + 3 * (-r + x) .^ 2 - k2 .* (1 - r) .^ 3 ./ k1) / 6) + (x>=r).*(k1 .* (-r .^ 3 - k2 .* (1 - r) .^ 3 ./ k1 + 3 * k2 .* (-r + x) .^ 2 ./ k1) / 6);
+		else
+		    error("invalid airfoil designator - 5 series airfoil must have either 0 or 1 camber identifier")
+		endif
 	    case 6 %NACA 6-series airfoil
-		l=str2num(nums(1)) %theoretical optimal lift coefficient
-		p=str2num(nums(2)) %distance along chord of maximum camber
-		s=str2num(nums(3)) %camber identifier
-		tt=str2num(nums(4:5)) %max thickness
-
-		cli=0.15*l;
-		
+		%not yet implemented
 	endswitch
+	theta=@(x) atan(dycdx(x)); %finding the slope in radians of the MCL
+	yt=@(x) 5*t*(.2969*sqrt(x)-.1260*x-.3516*x.^2+.2843*x.^3-.1015*x.^4);
+	xu=@(x) x-yt(x).*sin(theta(x));
+	xl=@(x) x+yt(x).*sin(theta(x));
+	yu=@(x) yc(x)+yt(x).*cos(theta(x));
+	yl=@(x) yc(x)-yt(x).*cos(theta(x));
+
+	xs=linspace(0,1,50); %x values for sampling the MCL
+
+	shape=[xu(xs.^2)' yu(xs.^2)'; xl((1-xs).^2)' yl((1-xs).^2)']; %squaring the x indices to have more points at the sharper curves of the airfoil (toward the leading edge)
+	mcl=[xs' yc(xs)'];	
 
 	%plotting the airfoil
 	clf;
@@ -52,6 +75,8 @@ function [shape, mcl]=airfoilgen(ident)
 	hold on
 	plot(mcl(:,1), mcl(:,2))
 	hold off
+	axis off
+	axis tight
 	daspect([1 1 1])
     else
 	error("invalid airfoil designator")
