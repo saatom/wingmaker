@@ -4,7 +4,7 @@
 %
 %Handles 4, 5, and 6-series NACA airfoils
 
-function [shape, mcl]=airfoilgen(ident)
+function out=airfoilgen(ident)
     if length(ident)>=9 && strcmpi(ident(1:4), "NACA")
 	series=length(ident(6:end));
 	nums=ident(6:end)
@@ -20,7 +20,7 @@ function [shape, mcl]=airfoilgen(ident)
 		    dycdx=@(x) x.*0;
 		else %cambered airfoil
 		    yc=@(x) (x<=p).*(m/p^2.*(2*p.*x-x.^2)) + (x>p).*(m/(1-p)^2).*((1-2*p)+2*p.*x-x.^2); %equation for MCL
-		    dycdx=@(x) (x<=p).*(2*m/p^2*(p-x)) + (x>p).*(2*(m/(1-p^2)*(p-x))); %derivative of the MCL
+		    dycdx=@(x) (x<=p).*(2*m/p^2*(p-x)) + (x>p).*(2*m/(1-p)^2*(p-x)); %derivative of the MCL
 		end
 	    case 5 %NACA 5-series airfoil (e.g. NACA 23012)
 		prof=str2num(nums(1:3)) %camber profile for determining coefficients
@@ -59,9 +59,9 @@ function [shape, mcl]=airfoilgen(ident)
 	endswitch
 	theta=@(x) atan(dycdx(x)); %finding the slope in radians of the MCL
 	yt=@(x) 5*t*(.2969*sqrt(x)-.1260*x-.3516*x.^2+.2843*x.^3-.1015*x.^4);
-	xu=@(x) x-yt(x).*sin(theta(x));
+	xu=@(x) x-yt(x).*sin(theta(x)); %x value corresponding to point on upper camber
 	xl=@(x) x+yt(x).*sin(theta(x));
-	yu=@(x) yc(x)+yt(x).*cos(theta(x));
+	yu=@(x) yc(x)+yt(x).*cos(theta(x)); %y value corresponding to the xu point on upper camber (thus the [xu, yu] pair produces a valid point on the surface of the airfoil)
 	yl=@(x) yc(x)-yt(x).*cos(theta(x));
 
 	xs=linspace(0,1,50); %x values for sampling the MCL
@@ -78,6 +78,24 @@ function [shape, mcl]=airfoilgen(ident)
 	axis off
 	axis tight
 	daspect([1 1 1])
+
+	%performance calculations
+	alpha_l0=-1/pi*quad(@(th) dycdx(.5*(1-cos(th)))*(cos(th)-1), 0, pi); %angle of attack at 0 lift
+	alpha_l0_deg=rad2deg(alpha_l0);
+	cl=@(alpha) 2*pi*(deg2rad(alpha)-alpha_l0);
+	An=@(n) 2/pi*quad(@(th) dycdx(.5*(1-cos(th)))*cos(n*th),0,pi); %An for moment coefficient calculation
+	A1=An(1);
+	A2=An(2);
+
+	out.shape=shape; %exporting the overall shape as a point matrix for plotting purposes
+	out.mcl=mcl; %exporting mcl as point matrix for plotting, but it's probably useless compared to the raw equation
+	out.yc=yc; %exporting mcl equation as an anonymous function
+	out.dycdx=dycdx; %exporting mcl gradient as an anonymous function
+	out.theta=theta;
+	out.cl=cl;
+	out.alphal0=alpha_l0_deg;
+	out.cm=pi/4*(A2-A1); %moment coefficient about 1/4 chord
+	out.xcp=@(alpha) 1/4*(1+pi/cl(alpha)*(A1-A2)); %center of pressure location
     else
 	error("invalid airfoil designator")
     endif
