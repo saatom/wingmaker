@@ -24,7 +24,7 @@ function out=airfoilgen(ident)
 		end
 	    case 5 %NACA 5-series airfoil (e.g. NACA 23012)
 		prof=str2num(nums(1:3)) %camber profile for determining coefficients
-		s=str2num(nums(3)); %string index
+		s=str2num(nums(3)); %camber index
 		t=str2num(nums(4:5))/100 %max thickness
 		if s==0 %simple camber
 		    coeffs=[ %non-reflexed camber coefficients
@@ -64,7 +64,7 @@ function out=airfoilgen(ident)
 	yu=@(x) yc(x)+yt(x).*cos(theta(x)); %y value corresponding to the xu point on upper camber (thus the [xu, yu] pair produces a valid point on the surface of the airfoil)
 	yl=@(x) yc(x)-yt(x).*cos(theta(x));
 
-	xs=linspace(0,1,50); %x values for sampling the MCL
+	xs=linspace(0,1,15); %x values for sampling the MCL
 
 	shape=[xu(xs.^2)' yu(xs.^2)'; xl((1-xs).^2)' yl((1-xs).^2)']; %squaring the x indices to have more points at the sharper curves of the airfoil (toward the leading edge)
 	mcl=[xs' yc(xs)'];	
@@ -92,10 +92,10 @@ function out=airfoilgen(ident)
 	out.yc=yc; %exporting mcl equation as an anonymous function
 	out.dycdx=dycdx; %exporting mcl gradient as an anonymous function
 	out.theta=theta;
-	out.cl=cl;
-	out.alphal0=alpha_l0_deg;
-	out.cm=pi/4*(A2-A1); %moment coefficient about 1/4 chord
-	out.xcp=@(alpha) 1/4*(1+pi/cl(alpha)*(A1-A2)); %center of pressure location
+	%out.cl=cl;
+	%out.alphal0=alpha_l0_deg;
+	%out.cm=pi/4*(A2-A1); %moment coefficient about 1/4 chord
+	%out.xcp=@(alpha) 1/4*(1+pi/cl(alpha)*(A1-A2)); %center of pressure location
     else
 	error("invalid airfoil designator")
     endif
