@@ -1,5 +1,5 @@
 function out = spm(airfoil, v_inf, alpha)
-    global alpha=deg2rad(alpha);
+    global alpha=-deg2rad(alpha);
     global v_inf;
     global points=airfoil.shape;
     global ctls=(points(1:end-1, :)+points(2:end,:))./2; %panel control point coordinates
@@ -9,7 +9,7 @@ function out = spm(airfoil, v_inf, alpha)
     global phis=atan2(dys, dxs);
     %phis=phis+(phis<0).*2*pi;
     %phis=phis.*(phis<pi)+(pi-phis).*(phis>=pi);
-    global betas=mod(phis+alpha+pi/2, 2*pi);
+    global betas=mod(phis-alpha+pi/2, 2*pi);
 
     A=[]; %making A matrix for computing lambdas
     for i=1:length(ctls)
@@ -27,25 +27,10 @@ function out = spm(airfoil, v_inf, alpha)
     B=-v_inf*2*pi*cos(betas); %making B matrix for computing lambdas 
     global lambdas=linsolve(A,B); %solving for lambdas
     lambdasum=sum(lambdas.*lens)
-
-    
+ 
     gridpoints=40; %number of points to sample on the grid
     gridbuffer=.5; %distance to add to edge of airfoil
     [xx yy]=meshgrid(linspace(min(points(:,1))-gridbuffer, max(points(:,1))+gridbuffer,gridpoints), linspace(min(points(:,2))-gridbuffer, max(points(:,2))+gridbuffer, gridpoints));
-    clf;
-    fill(points(:,1), points(:,2), 'k'); %plotting airfoil
-    hold on
-    %plot(ctls(:,1), ctls(:,2), '*'); %plotting center points
-    vels=vxy(xx, yy);
-    %quiver(xx, yy, vels.x, vels.y, 'r')
-    streamline(xx, yy, vels.x, vels.y, xx(:,1), yy(:,1));
-    for i=1:length(betas) %plotting normal vectors
-	delta=betas(i)-alpha; %angle of normal with respect to the x axis
-	phi=phis(i);
-	mag=.05;
-	%plot([ctls(i,1) ctls(i,1)+mag*cos(delta)], [ctls(i,2) ctls(i,2)+mag*sin(delta)], 'k') %plotting normal vector
-	%plot([ctls(i,1) ctls(i,1)+mag*cos(phi)], [ctls(i,2) ctls(i,2)+mag*sin(phi)], 'r') %plotting tangent vector
-    endfor 
 
     vts=[];
     cps=[];
@@ -62,16 +47,45 @@ function out = spm(airfoil, v_inf, alpha)
     cl=(sum(cns.*cos(alpha))-sum(cas.*sin(alpha)))
     cd=sum(cns.*sin(alpha))+sum(cas.*cos(alpha))
 
-    hold off
+    clf;
+    figure 1
+    %plot(ctls(:,1), ctls(:,2), '*'); %plotting center points
+    vels=vxy(xx, yy);
+    vmags=sqrt(vels.xc.^2+vels.yc.^2);
+    cpxy=1-(vmags./v_inf).^2;
+    subplot(2,1,1); 
+    hold on
+    fill(points(:,1), points(:,2), 'k'); %plotting airfoil
+    q=quiver(xx, yy, vels.x, vels.y, 'r');
+    set(q, "linewidth", 1)  
+    streamline(xx, yy, vels.x, vels.y, xx(:,1), yy(:,1));
     axis tight
     daspect([1 1 1])
     title("Flow over object using source panel method")
+    hold off
+
+    subplot(2,1,2);
+    hold on
+    imagesc([min(xx)(:) max(xx)(:)], [min(yy)(:) max(yy)(:)], cpxy);
+    size(xx)
+    size(yy)
+    size(cpxy)
+    %[min(xx(:)) max(xx(:)); min(yy(:)) max(yy(:))]
+    %imagesc(xx, yy, cpxy);
+    fill(points(:,1), points(:,2), 'k'); %plotting airfoil
+    axis tight
+    daspect([1 1 1])
+    hold off
 
     figure 2 %plotting pressure values
-    plot(ctls(:,1)(fixed), -cps(fixed))
+    plot(ctls(:,1)(fixed), cps(fixed))
+    set(gca, "ydir", "reverse")
     hold on
     %plot(ctls(:,1), vts) %plotting velocities
     hold off
+    title("Cp vs x")
+    xlabel("x")
+    ylabel("Cp")
 
     %figure 3 %plotting velocities
     %surf(xx, yy, sqrt(vels.x.^2+vels.y.^2));
@@ -142,16 +156,24 @@ function out=vxy(x, y)
     if length(x)~=1
 	out.x=[];
 	out.y=[];
+	out.xc=[];
+	out.yc=[];
 	for a=1:size(x)(1)
 	    row.x=[];
 	    row.y=[];
+	    row.xc=[];
+	    row.yc=[];
 	    for b=1:size(x)(2)
 		res=vxy(x(a,b), y(a,b));
 		row.x=[row.x res.x];
 		row.y=[row.y res.y];
+		row.xc=[row.xc res.xc];
+		row.yc=[row.yc res.yc];
 	    endfor
 	    out.x=[out.x; row.x];
 	    out.y=[out.y; row.y];
+	    out.xc=[out.xc; row.xc];
+	    out.yc=[out.yc; row.yc];
 	endfor
     elseif size(x) ~= size(y)
 	error("both inputs to vxy need to be the same size")
@@ -165,9 +187,9 @@ function out=vxy(x, y)
 	global phis;
 	global lambdas;
 	global points;
-	if ~inpolygon(x, y, points(:,1), points(:,2))
-	    out.x=v_inf*cos(alpha);
-	    out.y=v_inf*sin(alpha);
+	%if ~inpolygon(x, y, points(:,1), points(:,2))
+	    vx=v_inf*cos(alpha);
+	    vy=v_inf*sin(alpha);
 	    for j=1:length(ctls)
 		xj=ctls(j,1)-lens(j)/2*cos(phis(j)); yj=ctls(j,2)-lens(j)/2*sin(phis(j));
 		A=-(x-xj)*cos(phis(j))-(y-yj)*sin(phis(j));
@@ -193,12 +215,25 @@ function out=vxy(x, y)
 		endif
 		newx;
 		newy;
-		out.x=out.x+newx;
-		out.y=out.y+newy;
+		vx=vx+newx;
+		vy=vy+newy;
 	    endfor
+	    if inpolygon(x, y, points(:,1), points(:,2))
+		out.xc=vx;
+		out.yc=vy;
+		out.x=0;
+		out.y=0;
+	    else
+		out.x=vx;
+		out.y=vy;
+		out.xc=vx;
+		out.yc=vy;
+	    endif
+	    %{
 	else
 	    out.x=0;
 	    out.y=0;
 	endif
+	%}
     endif
 endfunction
