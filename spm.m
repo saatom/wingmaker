@@ -54,7 +54,7 @@ function out = spm(airfoil, v_inf, alpha)
     vels=vxy(xx, yy);
     vmags=sqrt(vels.xc.^2+vels.yc.^2);
     cpxy=1-(vmags./v_inf).^2;
-    subplot(2,1,1); 
+    %subplot(2,1,1); 
     hold on
     fill(points(:,1), points(:,2), 'k'); %plotting airfoil
     q=quiver(xx, yy, vels.x, vels.y, 'r');
@@ -65,7 +65,9 @@ function out = spm(airfoil, v_inf, alpha)
     title("Flow over object using source panel method")
     hold off
 
-    subplot(2,1,2);
+    %subplot(2,1,2);
+    figure 2
+    title("Cp scalar field visualization")
     hold on
     cpxy2=interp2(xx, yy, cpxy, xx2, yy2, 'linear');
     %imagesc([min(xx)(:) max(xx)(:)], [min(yy)(:) max(yy)(:)], cpxy2);
@@ -81,7 +83,7 @@ function out = spm(airfoil, v_inf, alpha)
     daspect([1 1 1])
     hold off
 
-    figure 2 %plotting pressure values
+    figure 3 %plotting pressure values
     plot(ctls(:,1)(fixed), cps(fixed))
     set(gca, "ydir", "reverse")
     hold on

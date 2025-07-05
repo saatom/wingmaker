@@ -1,0 +1,56 @@
+%CREATED BY: WYATT RICHARDS
+%CONTACT: wr1701@proton.me
+%
+%Function for loading and interpreting a wingmaker configuration file
+%
+%Dependencies:
+%	pkg io
+%Usage:
+%	loadwingdata("my_config_file.csv")
+%	loadwingdata("my_config_file.csv", 1) %the 1 is an optional flag to produce a plot of the wing
+%
+function out=loadwingdata(in, varargin)
+    check=exist(in);
+    if check ~= 2
+	error(["input argument is not a valid file; exist returned ", num2str(check)]);
+    endif
+    pkg load io;
+    file=csv2cell(in);
+    sections={};
+    secnum=0;
+    xx=[];
+    yy=[];
+    zz=[];
+    for i=1:size(file)(1)
+	if length(file{i,1})>=4 && strcmpi(file{i,1}(1:4), "NACA") %Check for a valid airfoil section specification
+	    secnum=secnum+1;
+	    sec.identifier=file{i,1};
+	    sec.chord=file{i,2};
+	    sec.position=file{i,3};
+	    sec.lsweep=-file{i,4};
+	    sec.vsweep=-file{i,5};
+	    sec.data=airfoilgen(sec.identifier);
+	    if secnum==1
+		dxy=[0 0]; %change in XY coordinates based on sweep angles and chord positioning
+	    else	
+		dp=(sections{secnum-1}.position-sec.position);
+		dxy=[dp*tand(sec.lsweep), dp*tand(sec.vsweep)];
+	    endif
+	    sec.shape=sec.data.shape*sec.chord+dxy;
+	    xx=[xx sec.shape(:,1)];
+	    zz=[zz sec.shape(:,2)];
+	    yy=[yy ones(1,length(sec.shape))'*sec.position];
+	    sections{secnum}=sec;
+	endif
+    endfor
+    out=sections;
+    if nargin>1 && varargin{nargin-1}==1
+	surf(xx, yy, zz); %Plotting the wing shape
+	hold on 
+	surf(xx, -yy, zz); %Plotting the wing shape
+	hold off
+	daspect([1 1 1]); %Make the wing to scale
+	lighting flat
+	shading interp
+    endif
+endfunction

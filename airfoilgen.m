@@ -7,12 +7,12 @@
 function out=airfoilgen(ident)
     if length(ident)>=9 && strcmpi(ident(1:4), "NACA")
 	series=length(ident(6:end));
-	nums=ident(6:end)
+	nums=ident(6:end);
 	switch series
 	    case 4 %NACA 4-series airfoil (e.g. NACA 2412)
-		m=str2num(nums(1))/100 %max camber as a multiple of chord
-		p=str2num(nums(2))/10 %location of max camber along chord
-		t=str2num(nums(3:4))/100 %max thickness as a multiple of chord
+		m=str2num(nums(1))/100; %max camber as a multiple of chord
+		p=str2num(nums(2))/10; %location of max camber along chord
+		t=str2num(nums(3:4))/100; %max thickness as a multiple of chord
 		if (m==0 || p==0) && m!=p
 		    error("invalid airfoil designator - symmetrical airfoils must follow the format of 00XX")
 		elseif m==0 %symmetrical airfoil
@@ -70,6 +70,7 @@ function out=airfoilgen(ident)
 	mcl=[xs' yc(xs)'];	
 
 	%plotting the airfoil
+	%{
 	clf;
 	plot(shape(:,1), shape(:,2))
 	hold on
@@ -78,6 +79,7 @@ function out=airfoilgen(ident)
 	axis off
 	axis tight
 	daspect([1 1 1])
+	%}
 
 	%performance calculations
 	alpha_l0=-1/pi*quad(@(th) dycdx(.5*(1-cos(th)))*(cos(th)-1), 0, pi); %angle of attack at 0 lift
