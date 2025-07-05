@@ -64,7 +64,7 @@ function out=airfoilgen(ident)
 	yu=@(x) yc(x)+yt(x).*cos(theta(x)); %y value corresponding to the xu point on upper camber (thus the [xu, yu] pair produces a valid point on the surface of the airfoil)
 	yl=@(x) yc(x)-yt(x).*cos(theta(x));
 
-	xs=linspace(0,1,15); %x values for sampling the MCL
+	xs=linspace(0,1,50); %x values for sampling the MCL
 
 	shape=[xu(xs.^2)' yu(xs.^2)'; xl((1-xs).^2)' yl((1-xs).^2)']; %squaring the x indices to have more points at the sharper curves of the airfoil (toward the leading edge)
 	mcl=[xs' yc(xs)'];	
