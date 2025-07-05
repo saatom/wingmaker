@@ -31,6 +31,7 @@ function out = spm(airfoil, v_inf, alpha)
     gridpoints=40; %number of points to sample on the grid
     gridbuffer=.5; %distance to add to edge of airfoil
     [xx yy]=meshgrid(linspace(min(points(:,1))-gridbuffer, max(points(:,1))+gridbuffer,gridpoints), linspace(min(points(:,2))-gridbuffer, max(points(:,2))+gridbuffer, gridpoints));
+    [xx2 yy2]=meshgrid(linspace(min(points(:,1))-gridbuffer, max(points(:,1))+gridbuffer,gridpoints*4), linspace(min(points(:,2))-gridbuffer, max(points(:,2))+gridbuffer, gridpoints*4));
 
     vts=[];
     cps=[];
@@ -66,12 +67,15 @@ function out = spm(airfoil, v_inf, alpha)
 
     subplot(2,1,2);
     hold on
-    imagesc([min(xx)(:) max(xx)(:)], [min(yy)(:) max(yy)(:)], cpxy);
-    size(xx)
-    size(yy)
-    size(cpxy)
-    %[min(xx(:)) max(xx(:)); min(yy(:)) max(yy(:))]
-    %imagesc(xx, yy, cpxy);
+    cpxy2=interp2(xx, yy, cpxy, xx2, yy2, 'linear');
+    %imagesc([min(xx)(:) max(xx)(:)], [min(yy)(:) max(yy)(:)], cpxy2);
+    xxr=[xx(:); ctls(:,1)]';
+    yyr=[yy(:); ctls(:,2)]';
+    cpxyr=[cpxy(:); cps(:)];
+    [xi yi cpi]=griddata(xxr, yyr, cpxyr, xx2, yy2);
+    pcolor(xi, yi, cpi);
+    shading interp
+    colorbar
     fill(points(:,1), points(:,2), 'k'); %plotting airfoil
     axis tight
     daspect([1 1 1])
