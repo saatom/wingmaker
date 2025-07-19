@@ -29,7 +29,7 @@ function out = spm(airfoil, v_inf, alpha)
     lambdasum=sum(lambdas.*lens)
  
     gridpoints=40; %number of points to sample on the grid
-    gridbuffer=.5; %distance to add to edge of airfoil
+    gridbuffer=.25; %distance to add to edge of airfoil
     [xx yy]=meshgrid(linspace(min(points(:,1))-gridbuffer, max(points(:,1))+gridbuffer,gridpoints), linspace(min(points(:,2))-gridbuffer, max(points(:,2))+gridbuffer, gridpoints));
     [xx2 yy2]=meshgrid(linspace(min(points(:,1))-gridbuffer, max(points(:,1))+gridbuffer,gridpoints*4), linspace(min(points(:,2))-gridbuffer, max(points(:,2))+gridbuffer, gridpoints*4));
 
@@ -69,14 +69,17 @@ function out = spm(airfoil, v_inf, alpha)
     figure 2
     title("Cp scalar field visualization")
     hold on
-    cpxy2=interp2(xx, yy, cpxy, xx2, yy2, 'linear');
+    %cpxy2=interp2(xx, yy, cpxy, xx2, yy2, 'linear'); %expand grid for more refined data
     %imagesc([min(xx)(:) max(xx)(:)], [min(yy)(:) max(yy)(:)], cpxy2);
     xxr=[xx(:); ctls(:,1)]';
     yyr=[yy(:); ctls(:,2)]';
     cpxyr=[cpxy(:); cps(:)];
     [xi yi cpi]=griddata(xxr, yyr, cpxyr, xx2, yy2);
-    pcolor(xi, yi, cpi);
-    shading interp
+    %pcolor(xi, yi, cpi);
+    cpxy(find(cpxy==0))=min(cpxy(find(cpxy>0)));
+    pcolor(xx, yy, cpxy);
+    %shading interp
+    shading flat
     colorbar
     fill(points(:,1), points(:,2), 'k'); %plotting airfoil
     axis tight
