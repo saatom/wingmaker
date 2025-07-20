@@ -1,22 +1,25 @@
-%CREATED BY: WYATT RICHARDS
-%CONTACT: wr1701@proton.me
+%CREATED BY: Wyatt Richards
+%EMAIL: wr1701@proton.me
 %
-%Function for loading and interpreting a wingmaker configuration file
+%DEPENDENCIES:
+%	Octave io package
 %
-%Dependencies:
-%	pkg io
-%Usage:
+%USAGE:
 %	data = loadwingdata("my_config_file.csv")
 %	data = loadwingdata("my_config_file.csv", 1) %the 1 is an optional flag to produce a plot of the wing
 %
-%OUTPUT:
-%	Cell array of structs (one for each section) with the following fields:
+%	data output is a cell array containing structs for each airfoil section with the following fields:
 %	.identifier
 %	.chord
 %	.position
 %	.lsweep
 %	.vsweep
 %	.data
+%
+%	(e.g. if you want the chord length of the second panel, you would use data{2}.chord)
+%
+%DESCRIPTION:
+%	Function for loading and interpreting a wingmaker configuration file
 function out=loadwingdata(in, varargin)
     check=exist(in);
     if check ~= 2
@@ -62,7 +65,8 @@ function out=loadwingdata(in, varargin)
     out.AR=wingspan^2/area; %wing aspect ratio for drag calculations
     out.S=area;
     out.sections=sections;
-    if nargin>1 && varargin{nargin-1}==1
+    if nargin>1 && varargin{1}==1
+	figure
 	surf(xx, yy, zz); %Plotting the wing shape
 	hold on 
 	surf(xx, -yy, zz); %Plotting the wing shape

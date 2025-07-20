@@ -1,9 +1,14 @@
-%Generates MCL and full airfoil shape from NACA identifier codes
-%Only accepts airfoils in the format
-%    NACA 23012
+%CREATED BY: Wyatt Richards
+%EMAIL: wr1701@proton.me
 %
-%Handles 4, 5, and 6-series NACA airfoils
-
+%USAGE:
+%	output = airfoilgen("NACA XXXX", plot)
+%
+%	If plot is set to true, a plot of the airfoil with its mean camber line will be generated
+%
+%DESCRIPTION:
+%	Generates MCL and full airfoil shape from NACA identifier codes (currently only supports NACA 4 and 5-series airfoils)
+%	Please write airfoils in the format "NACA 23012"
 function out=airfoilgen(ident, varargin)
     if length(ident)>=9 && strcmpi(ident(1:4), "NACA")
 	series=length(ident(6:end));

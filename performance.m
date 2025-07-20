@@ -1,15 +1,18 @@
-%MADE BY: Wyatt Richards
+%CREATED BY: Wyatt Richards
 %EMAIL: wr1701@proton.me
 %
 %DEPENDENCIES:
 %1. Octave io package
-%2. Xfoil
+%2. XFOIL (make sure executable is in the system's search path)
 %
 %USAGE:
-%	data = performance(wing_struct, viscous_Re, [alpha_min, alpha_max, alpha_increment})
+%	data = performance(wing_struct, Re, [alpha_min, alpha_max, alpha_increment})
 %
-%Program to take a wingmaker wing struct and generate performance data using xfoil
-%*Note: this is only tested on Linux-based systems. It will probably also work with other UNIX-like systems (e.g. macOS or BSD) but will likely not work on Windows
+%DESCRIPTION:
+%	Program to take a wingmaker wing struct and generate performance data using XFOIL
+%	*Note: this is only tested on Linux-based systems. It will probably also work with other UNIX-like systems (e.g. macOS or BSD) but will likely not work on Windows
+%
+%	All calculations are based on the assumption that Cl and Cd between two airfoil sections changes linearly along them (thus half way between the sections would have a Cl equal to the average of the Cl at the two ends)
 function data=performance(wing, varargin)
     pkg load io
     amin=-12; amax=12; ainc=1; %alfa min, max, and increment for plotting purposes
@@ -61,7 +64,9 @@ function data=performance(wing, varargin)
 		dat=sort([dat; avg(localmissing,:)]);
 		missing=[missing localmissing];
 	    endif
-	    avg=avg+[0 1 1 1 1].*(c1.*datp+c2.*dat)./(2)*dp; %add the average performance stuff between two sections
+	    localavg(:,1:4)=(c1.*datp(:,1:4)+c2.*dat(:,1:4))./(2)*dp; %find the average of the performance data in this particular section
+	    localavg(:,5)=(c1^2.*datp(:,5)+c2^2.*dat(:,5))./(2)*dp; %find the average of the performance data in this particular section
+	    avg=avg+[0 1 1 1 1].*localavg; %add the average performance stuff between two sections
 	endif
     endfor
     missing=unique(sort(missing)); %remove contaminated data points from divergence
@@ -73,21 +78,19 @@ function data=performance(wing, varargin)
 	warning([num2str(length(missing)) " data point(s) missing due to XFOIL divergence\n"]);
     endif
 
-    clf reset
-    figure 1;
+    figure
     subplot(2,1,1);
     ax=plotyy(avg(:,1), avg(:,2), avg(:,1), avg(:,4));
     title("c_l and c_d vs alpha")
     ylabel(ax(1), "c_l")
     ylabel(ax(2), "c_d")
     xlabel("alpha (degrees)")
-    legend({"c_l", "c_d"})
     grid on
 
     %figure 2;
     subplot(2,1,2);
     plot(avg(:,1), avg(:,5))
-    title("c_m vs alpha")
+    title("c_m vs alpha (NOT WORKING; TO BE FIXED)")
     xlabel("alpha (degrees)")
     ylabel("cm")
     grid on
