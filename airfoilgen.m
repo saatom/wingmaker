@@ -4,7 +4,7 @@
 %
 %Handles 4, 5, and 6-series NACA airfoils
 
-function out=airfoilgen(ident)
+function out=airfoilgen(ident, varargin)
     if length(ident)>=9 && strcmpi(ident(1:4), "NACA")
 	series=length(ident(6:end));
 	nums=ident(6:end);
@@ -64,22 +64,23 @@ function out=airfoilgen(ident)
 	yu=@(x) yc(x)+yt(x).*cos(theta(x)); %y value corresponding to the xu point on upper camber (thus the [xu, yu] pair produces a valid point on the surface of the airfoil)
 	yl=@(x) yc(x)-yt(x).*cos(theta(x));
 
-	xs=linspace(0,1,50); %x values for sampling the MCL
+	%xs=(linspace(0,1,80)); %x values for sampling the MCL
+	xs=linspace(1,0,80);
 
 	shape=[xu(xs.^2)' yu(xs.^2)'; xl((1-xs).^2)' yl((1-xs).^2)']; %squaring the x indices to have more points at the sharper curves of the airfoil (toward the leading edge)
 	mcl=[xs' yc(xs)'];	
 
 	%plotting the airfoil
-	%{
-	clf;
-	plot(shape(:,1), shape(:,2))
-	hold on
-	plot(mcl(:,1), mcl(:,2))
-	hold off
-	axis off
-	axis tight
-	daspect([1 1 1])
-	%}
+	if nargin > 1 
+	    clf;
+	    plot(shape(:,1), shape(:,2))
+	    hold on
+	    plot(mcl(:,1), mcl(:,2))
+	    hold off
+	    axis off
+	    axis tight
+	    daspect([1 1 1]) 
+	endif
 
 	%performance calculations
 	alpha_l0=-1/pi*quad(@(th) dycdx(.5*(1-cos(th)))*(cos(th)-1), 0, pi); %angle of attack at 0 lift

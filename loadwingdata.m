@@ -6,8 +6,17 @@
 %Dependencies:
 %	pkg io
 %Usage:
-%	loadwingdata("my_config_file.csv")
-%	loadwingdata("my_config_file.csv", 1) %the 1 is an optional flag to produce a plot of the wing
+%	data = loadwingdata("my_config_file.csv")
+%	data = loadwingdata("my_config_file.csv", 1) %the 1 is an optional flag to produce a plot of the wing
+%
+%OUTPUT:
+%	Cell array of structs (one for each section) with the following fields:
+%	.identifier
+%	.chord
+%	.position
+%	.lsweep
+%	.vsweep
+%	.data
 %
 function out=loadwingdata(in, varargin)
     check=exist(in);
