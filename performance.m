@@ -5,17 +5,32 @@
 %1. Octave io package
 %2. Xfoil
 %
+%USAGE:
+%	data = performance(wing_struct, viscous_Re, [alpha_min, alpha_max, alpha_increment})
+%
 %Program to take a wingmaker wing struct and generate performance data using xfoil
 %*Note: this is only tested on Linux-based systems. It will probably also work with other UNIX-like systems (e.g. macOS or BSD) but will likely not work on Windows
-function data=performance(wing)
+function data=performance(wing, varargin)
     pkg load io
-    amin=-5; amax=5; ainc=.5; %alfa min, max, and increment for plotting purposes
-    sections=length(wing);
-    if sections < 1 || !iscell(wing)
+    amin=-12; amax=12; ainc=1; %alfa min, max, and increment for plotting purposes
+    Re=3e6; %reynold's number at the first airfoil section
+    switch nargin
+	case 2
+	    Re=varargin{1};
+	case 3
+	    amin=varargin{2}(1); amax=varargin{2}(2); ainc=varargin{2}(3);
+    endswitch
+    sections=length(wing.sections);
+    if sections < 1 || !iscell(wing.sections)
 	error("performance - invalid wing input");
     endif
+    datas={};
+    avg=[[amin:ainc:amax]' zeros((amax-amin)/ainc+1, 4)]; %average of all of the dat
+    badrows=[];
+    missing=[];
+    c0=wing.sections{1}.chord; %initial chord length
     for i=1:sections
-	sect=wing{i};
+	sect=wing.sections{i};
 	[insfid insname]=mkstemp("xinstrXXXXXX", true); %Create a temporary file for xfoil input
 	[secfid secname]=mkstemp("airsecXXXXXX", true); %Create a temporary file with the airfoil pattern
 	shape=sect.shape;
@@ -23,10 +38,58 @@ function data=performance(wing)
 	fopen(insfid);	
 	datname=["airdat" secname(end-6:end) ".txt"]; %Unique name for the to-be-created performance data file produced by xfoil
 	%fputs(insfid, ["load " secname "\n" secname(end-6:end) "\noper\npacc\n" datname "\n\naseq " num2str(amin) " " num2str(amax) " " num2str(ainc) "\npacc\n\nquit"]);
-	fputs(insfid, [sect.identifier "\n" secname(end-6:end) "\noper\npacc\n" datname "\n\naseq " num2str(amin) " " num2str(amax) " " num2str(ainc) "\npacc\n\nquit"]);
+	fputs(insfid, [sect.identifier "\n" secname(end-6:end) "\noper\nvisc" num2str(Re*sect.chord/c0) "\niter 100\npacc\n" datname "\n\naseq " num2str(amin) " " num2str(amax) " " num2str(ainc) "\npacc\n\nquit"]);
 	system(["xfoil < " insname], true);
 	dat=dlmread(datname, '', 12, 0)(:,1:5); %Load xfoil's data into octave; columns 1-5 are [ ALPHA , CL , CD , CDp , CM ]
 	data.raw{i}=dat;
-	delete(secname, insname, datname); %Get rid of all the files we just created
+	delete(secname, insname, datname); %Get rid of all the temporary files that were just created
+	if i>1 %calculate weighted average for performance data
+	    sec=wing.sections{i}; secp=wing.sections{i-1};
+	    dp=sec.position-secp.position;
+	    c1=secp.chord;
+	    c2=sec.chord;
+	    datp=data.raw{i-1};
+	    valid=length(dat(:,1))==length(avg(:,1)); %check if there are as many data points in the latest XFOIL output as we expect
+	    if valid != 1
+		localmissing=[]; %store the indices of the missing data points in this specific airfoil section
+		for j=1:length(avg(:,1))
+		    k=j-length(localmissing);
+		    if avg(j,1)~=dat(k,1)
+			localmissing=[localmissing j]; %add this problematic data point to the list of missing ones
+		    endif
+		endfor
+		dat=sort([dat; avg(localmissing,:)]);
+		missing=[missing localmissing];
+	    endif
+	    avg=avg+[0 1 1 1 1].*(c1.*datp+c2.*dat)./(2)*dp; %add the average performance stuff between two sections
+	endif
     endfor
+    missing=unique(sort(missing)); %remove contaminated data points from divergence
+    avg(missing,:)=inf; %set contaminated data points to infinity so that they're easy to remove
+    avg=avg(find(~isinf(avg(:,1))),:); %remove aforementioned data points
+    avg(:,2:end)=avg(:,2:end)/wing.S;
+    data.polar=avg;
+    if length(missing)>0
+	warning([num2str(length(missing)) " data point(s) missing due to XFOIL divergence\n"]);
+    endif
+
+    clf reset
+    figure 1;
+    subplot(2,1,1);
+    ax=plotyy(avg(:,1), avg(:,2), avg(:,1), avg(:,4));
+    title("c_l and c_d vs alpha")
+    ylabel(ax(1), "c_l")
+    ylabel(ax(2), "c_d")
+    xlabel("alpha (degrees)")
+    legend({"c_l", "c_d"})
+    grid on
+
+    %figure 2;
+    subplot(2,1,2);
+    plot(avg(:,1), avg(:,5))
+    title("c_m vs alpha")
+    xlabel("alpha (degrees)")
+    ylabel("cm")
+    grid on
+    wing.polar=data;
 endfunction

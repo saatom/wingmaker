@@ -17,7 +17,6 @@
 %	.lsweep
 %	.vsweep
 %	.data
-%
 function out=loadwingdata(in, varargin)
     check=exist(in);
     if check ~= 2
@@ -30,6 +29,7 @@ function out=loadwingdata(in, varargin)
     xx=[];
     yy=[];
     zz=[];
+    area=0; %initializing variable for planform wing area
     for i=1:size(file)(1)
 	if length(file{i,1})>=4 && strcmpi(file{i,1}(1:4), "NACA") %Check for a valid airfoil section specification
 	    secnum=secnum+1;
@@ -41,10 +41,15 @@ function out=loadwingdata(in, varargin)
 	    sec.data=airfoilgen(sec.identifier);
 	    if secnum==1
 		dxy=[0 0]; %change in XY coordinates based on sweep angles and chord positioning
+		sec.area=0;
 	    else	
 		dp=(sections{secnum-1}.position-sec.position);
-		dxy=[dp*tand(sec.lsweep), dp*tand(sec.vsweep)];
+		dxyp=sections{secnum-1}.dxy; %dxy of the previous airfoil section
+		dxy=[dp*tand(sec.lsweep), dp*tand(sec.vsweep)]+dxyp;
+		sec.area=-dp*(sec.chord+sections{secnum-1}.chord)/2;
+		area=area+sec.area;
 	    endif
+	    sec.dxy=dxy;
 	    sec.shape=sec.data.shape*sec.chord+dxy;
 	    xx=[xx sec.shape(:,1)];
 	    zz=[zz sec.shape(:,2)];
@@ -52,7 +57,11 @@ function out=loadwingdata(in, varargin)
 	    sections{secnum}=sec;
 	endif
     endfor
-    out=sections;
+    area=area*2; %compensate for the fact that all calculations are done for half of a wing
+    wingspan=sections{end}.position*2;
+    out.AR=wingspan^2/area; %wing aspect ratio for drag calculations
+    out.S=area;
+    out.sections=sections;
     if nargin>1 && varargin{nargin-1}==1
 	surf(xx, yy, zz); %Plotting the wing shape
 	hold on 
