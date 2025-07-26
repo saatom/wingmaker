@@ -65,6 +65,12 @@ function out=loadwingdata(in, varargin)
     out.AR=wingspan^2/area; %wing aspect ratio for drag calculations
     out.S=area;
     out.sections=sections;
+    out.xx=xx; %outputting the mesh vertices for plotting
+    out.yy=yy;
+    out.zz=zz;
+    out.alphas=[-12 12 1]; %default is starting at -12 degrees to 12 degrees at 1 degree intervals
+    out.performance_data.polar=[];
+    out.performance_data.raw=[];
     if nargin>1 && varargin{1}==1
 	figure
 	surf(xx, yy, zz); %Plotting the wing shape

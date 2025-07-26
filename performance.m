@@ -78,6 +78,7 @@ function data=performance(wing, varargin)
 	warning([num2str(length(missing)) " data point(s) missing due to XFOIL divergence\n"]);
     endif
 
+    %{
     figure
     subplot(2,1,1);
     ax=plotyy(avg(:,1), avg(:,2), avg(:,1), avg(:,4));
@@ -95,4 +96,5 @@ function data=performance(wing, varargin)
     ylabel("cm")
     grid on
     wing.polar=data;
+    %}
 endfunction
