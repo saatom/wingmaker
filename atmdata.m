@@ -16,7 +16,6 @@
 %DESCRIPTION:
 %	Pull various standard atmospheric variables given a density altitude.
 %	Thank you to Nicholas Sarmiento (https://github.com/nicolasarmientor) for the atmospheric data table
-%	
 function varargout = atmdata(h, varargin)
   pkg load io;
   data = cell2mat(csv2cell("standard_atmosphere_table.csv")(2:end,:));
@@ -29,7 +28,8 @@ function varargout = atmdata(h, varargin)
   for i=1:nargin-1
     col = find(strcmpi(varargin{i}, variables))+1;
     if col == 6 %k is just mu/rho
-
+      [mus rhos] = atmdata(h, "mu", "rho");
+      varargout{i} = mus./rhos;
     else
       dat = data(:,col); %find data column you're interested in
       varargout{i} = interp1(alts, dat, h);
