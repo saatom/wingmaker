@@ -1,5 +1,5 @@
 %Wyatt Richards <wr1701@proton.me>
-function makegui(wing)
+function h = makegui(configname)
   close all;
   pkg load io;
   h.fig = figure;
@@ -8,6 +8,8 @@ function makegui(wing)
     fid=fopen(".wingmakerrc", 'w');
     fputs(fid, "theme, 1\n");
     fputs(fid, "scale, 1\n");
+    fputs(fid, "meshlines, 1\n");
+    fputs(fid, "meshpoints, 50\n");
     fclose(fid);
   endif
 
@@ -15,11 +17,13 @@ function makegui(wing)
   for i=1:size(guiprefs)(1)
     param = guiprefs{i,1};
     val = guiprefs{i,2};
-    if strcmpi(param, "theme")
-      h.theme = val;
-      fprintf("Theme is %f\n", val);
+    if isnumeric(val)
+      val = num2str(val); %make numeric settings into strings
     endif
+    eval(["h." param " = " val ";"]);
   endfor
+
+  wing = loadwingdata(configname, h.meshpoints);
 
   if h.theme == 1 %dark theme
     c.button = [40, 44, 48]/255; %button background color
@@ -62,7 +66,7 @@ function makegui(wing)
   h.panel2 = uipanel ("units", "pixels", "position", [0 0 1 1], "backgroundcolor", c.background);
   h.panel1 = uipanel ("units", "pixels", "position", [0 0 300 640]);
   h.group1 = uibuttongroup (h.panel1, "position", [0 .9 1 .1]); %main button group
-  h.infogroup = uibuttongroup (h.panel1, "position", [0 .08 1 .3]); %info group
+  h.infogroup = uibuttongroup (h.panel1, "position", [0 .08 1 .3], "visible", false); %info group
   p.button={"parent", h.panel1,
   "units", "normalized", 
   "string", "Another Button", 
@@ -86,22 +90,22 @@ function makegui(wing)
 
   %% START INFO GROUP
 
-  infocount = 5;
+  infocount = 6;
   h.lift_text = uicontrol ("style", "text", "parent", h.infogroup, 
-  "position", [0 (1/infocount)*(1-1) 1 1/infocount],
+  "position", [0 (1/infocount)*(3-1) 1 1/infocount],
   "horizontalalignment", "left",
   "backgroundcolor", c.panel,
-  "string", "L: 0 N");
+  "string", "L: (NO DATA) N");
   h.drag_text = uicontrol ("style", "text", "parent", h.infogroup, 
   "position", [0 (1/infocount)*(2-1) 1 1/infocount],
   "horizontalalignment", "left",
   "backgroundcolor", c.panel,
-  "string", "D: 0 N");
+  "string", "D: (NO DATA) N");
   h.moment_text = uicontrol ("style", "text", "parent", h.infogroup, 
-  "position", [0 (1/infocount)*(3-1) 1 1/infocount],
+  "position", [0 (1/infocount)*(1-1) 1 1/infocount],
   "horizontalalignment", "left",
   "backgroundcolor", c.panel,
-  "string", "M (c/4): 0 Nm");
+  "string", "M (c/4): (NO DATA) Nm");
   h.velocity_text = uicontrol ("style", "text", "parent", h.infogroup, 
   "horizontalalignment", "left",
   "position", [0 (1/infocount)*(4-1) 1 1/infocount],
@@ -112,6 +116,11 @@ function makegui(wing)
   "horizontalalignment", "left",
   "backgroundcolor", c.panel,
   "string", "Altitude: 0 km");
+  h.alpha_l0_text = uicontrol ("style", "text", "parent", h.infogroup, 
+  "position", [0 (1/infocount)*(6-1) 1 1/infocount],
+  "horizontalalignment", "left",
+  "backgroundcolor", c.panel,
+  "string", "Alpha_L=0: (NO DATA) deg");
 
   %% END INFO GROUP
 
@@ -146,7 +155,9 @@ function makegui(wing)
   h.wing=wing;
   h.plot = surf(h.ax, wing.xx_plot, wing.yy_plot, wing.zz_plot);
   shading interp;
-  set(h.plot, "edgecolor", "k");
+  if h.meshlines == 1
+    set(h.plot, "edgecolor", "k");
+  endif
   daspect([1 1 1]);
   axis tight
   set(gca, "xcolor", c.axis, "ycolor", c.axis, "zcolor", c.axis, "color", c.background_plot);
@@ -214,6 +225,7 @@ function updatePlot(obj, init = false)
       set(h.alpha_slider, "min", wing.alphas(1), "max", wing.alphas(2), "value", 0);
       set(h.slider_text_entry, "string", "0");
       guidata(gcf, h);
+      set(h.alpha_l0_text, "string", sprintf("Alpha_L=0: %.2f deg", h.wing.performance_data.alpha_l0));
       alpha = 0;
       replot = true;
     case h.fig
@@ -239,6 +251,7 @@ function updatePlot(obj, init = false)
       set(h.lift_text, "string", ["L: " L " N"]);
       set(h.drag_text, "string", ["D: " D " N"]);
       set(h.moment_text, "string", ["M (c/4): " M " Nm"]);
+      set(h.infogroup, "visible", true);
     endif
     set(h.plot, "xdata", wing.xx_plot.*cosd(-alpha) - wing.zz_plot.*sind(-alpha),
     "zdata", wing.xx_plot.*sind(-alpha) + wing.zz_plot.*cosd(-alpha));
