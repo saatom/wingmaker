@@ -70,25 +70,13 @@ function data=performance(wing, varargin)
 	msg=sprintf("%.f data points missing due to XFOIL divergence; using linear extrapolation to fill the gaps\n", length(avg(:,1))-length(rawdat(:,1)));
 	warning(msg);
       endif
-      %{
-      if valid != 1
-	localmissing=[]; %store the indices of the missing data points in this specific airfoil section
-	for j=1:length(avg(:,1)) %go through data points and look for missing ones
-	  k=j-length(localmissing);
-	  if length(dat)<k || avg(j,1)~=dat(k,1) %check if each alpha in avg has a corresponding row in dat
-	    localmissing=[localmissing j] %add this problematic data point to the list of missing ones
-	  endif
-	endfor
-	dat=sort([dat; avg(localmissing,:)]);
-	missing=[missing localmissing];
-      endif
-	%}
       localavg(:,1:4)=(c1.*datp(:,1:4)+c2.*dat(:,1:4))./(2)*dp; %find the average of the performance data in this particular section
       localavg(:,5)=(c1^2.*datp(:,5)+c2^2.*dat(:,5))./(2)*dp; %find the average of the performance data in this particular section
       avg=avg+[0 1 1 1 1].*localavg*q_inf*.5; %add the average performance stuff between two sections
     endif
   endfor
   data.polar=avg;
+  data.alpha_l0=fzero(@(x) interp1(avg(:,1), avg(:,2), x)-0, -2); %find alpha where lift is 0
   if length(missing)>0
     warning([num2str(length(missing)) " data point(s) missing due to XFOIL divergence\n"]);
   endif
