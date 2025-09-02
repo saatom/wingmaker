@@ -155,13 +155,15 @@ function h = makegui(configname)
   h.wing=wing;
   h.plot = surf(h.ax, wing.xx_plot, wing.yy_plot, wing.zz_plot);
   set(h.plot, "cdata", ones(size(wing.zz_plot)).*5);
-  h.colorbar = colorbar(h.ax, "xcolor", c.text, "xlabel", "Pressure Coefficient (Cp)", "southoutside");
+  h.colorbar = colorbar(h.ax, "xcolor", c.text, "xlabel", "Pressure Coefficient (Cp)", "xaxislocation", "top", "southoutside");
+  set(h.colorbar, "position", [0.130000 0 0.775000 0.048900]);
   %h.colorbar.Label.String = "Cp"
   shading interp;
   if h.meshlines == 1
     set(h.plot, "edgecolor", "k");
   endif
   daspect([1 1 1]);
+  set(h.ax, "position", [.025 .025 .95 .95]);
   axis tight
   set(gca, "xcolor", c.axis, "ycolor", c.axis, "zcolor", c.axis, "color", c.background_plot);
   guidata(gcf, h);
