@@ -2,7 +2,7 @@
 function h = makegui(configname)
   close all;
   pkg load io;
-  h.fig = figure;
+  h.fig = figure("keypressfcn", @keypress);
 
   if ~exist(".wingmakerrc") %make a settings file if one doesn't already exist
     fid=fopen(".wingmakerrc", 'w');
@@ -24,6 +24,7 @@ function h = makegui(configname)
   endfor
 
   wing = loadwingdata(configname, h.meshpoints);
+  h.alphas = [-12 12 1];
 
   if h.theme == 1 %dark theme
     c.button = [40, 44, 48]/255; %button background color
@@ -170,16 +171,16 @@ function h = makegui(configname)
 endfunction
 
 function out = getColorMap(wing, alpha)
-  plr = wing.performance_data.polar
-  ind = find(plr(:,1) == alpha) %find index in polar where the alpha occurs
+  plr = wing.performance_data.polar;
+  ind = find(plr(:,1) == alpha); %find index in polar where the alpha occurs
   if length(ind) != 0
     out = [];
     for i = 1:size(wing.zz)(2)
       zs = wing.zz(:,i)./wing.chords(i);
       zs = zs - min(zs);
-      minz = find(zs == min(zs))(1) %find where airfoil goes from upper surface to lower surface
-      uppers = zs(1:minz)
-      lowers = zs(minz+1:end)
+      minz = find(zs == min(zs))(1); %find where airfoil goes from upper surface to lower surface
+      uppers = zs(1:minz);
+      lowers = zs(minz+1:end);
       cpu = wing.performance_data.cpu{i}{ind};
       cpl = wing.performance_data.cpl{i}{ind};
 
@@ -188,7 +189,7 @@ function out = getColorMap(wing, alpha)
     endfor
     out = [fliplr(out) out];
   else %interpolating for alphas that haven't been computed directly
-    lims = [find(plr(:,1)<alpha)(end) find(plr(:,1)>=alpha)(1)]
+    lims = [find(plr(:,1)<alpha)(end) find(plr(:,1)>=alpha)(1)];
     low = getColorMap(wing, lims(1));
     high = getColorMap(wing, lims(2));
     out = low + (high-low).*(alpha/(lims(2)-lims(1)));
@@ -207,20 +208,35 @@ function changerc(prop, val)
   endfor
 endfunction
 
+function keypress(obj, keydata) %handle key presses for the figure
+  key = keydata.Key;
+  h = guidata(obj);
+
+  %Change alphas using arrow keys
+  alphaval = str2num(get(h.slider_text_entry, "string"));
+  alphabounds = h.alphas;
+  if strcmpi(key, "right") && alphaval < alphabounds(2)
+    set(h.slider_text_entry, "string", num2str(alphaval+alphabounds(3)));
+    updatePlot(h.slider_text_entry);
+  elseif strcmpi(key, "left") && alphaval > alphabounds(1)
+    set(h.slider_text_entry, "string", num2str(alphaval-alphabounds(3)));
+    updatePlot(h.slider_text_entry);
+  endif
+endfunction
+
 function updatePlot(obj, init = false)
   replot = false;
   h=guidata(obj);
   wing=h.wing;
 
   function out = alphaFilter(in, rnd)
-    %global wing;
     if in < wing.alphas(1)
       out=wing.alphas(1);
     elseif in > wing.alphas(2)
       out=wing.alphas(2);
     else
       if rnd == false
-	out = in
+	out = in;
       else
 	out=round(in/wing.alphas(3))*wing.alphas(3);
       endif
