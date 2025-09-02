@@ -9,7 +9,7 @@ function h = makegui(configname)
     fputs(fid, "theme, 1\n");
     fputs(fid, "scale, 1\n");
     fputs(fid, "meshlines, 1\n");
-    fputs(fid, "meshpoints, 50\n");
+    fputs(fid, "meshpoints, 80\n");
     fclose(fid);
   endif
 
@@ -154,6 +154,9 @@ function h = makegui(configname)
   wing.zz_plot = [fliplr(wing.zz), wing.zz];
   h.wing=wing;
   h.plot = surf(h.ax, wing.xx_plot, wing.yy_plot, wing.zz_plot);
+  set(h.plot, "cdata", ones(size(wing.zz_plot)).*5);
+  h.colorbar = colorbar(h.ax, "xcolor", c.text, "xlabel", "Pressure Coefficient (Cp)", "southoutside");
+  %h.colorbar.Label.String = "Cp"
   shading interp;
   if h.meshlines == 1
     set(h.plot, "edgecolor", "k");
@@ -162,7 +165,32 @@ function h = makegui(configname)
   axis tight
   set(gca, "xcolor", c.axis, "ycolor", c.axis, "zcolor", c.axis, "color", c.background_plot);
   guidata(gcf, h);
-  %h.colorbar=colorbar("parent", h.plot);
+endfunction
+
+function out = getColorMap(wing, alpha)
+  plr = wing.performance_data.polar
+  ind = find(plr(:,1) == alpha) %find index in polar where the alpha occurs
+  if length(ind) != 0
+    out = [];
+    for i = 1:size(wing.zz)(2)
+      zs = wing.zz(:,i)./wing.chords(i);
+      zs = zs - min(zs);
+      minz = find(zs == min(zs))(1) %find where airfoil goes from upper surface to lower surface
+      uppers = zs(1:minz)
+      lowers = zs(minz+1:end)
+      cpu = wing.performance_data.cpu{i}{ind};
+      cpl = wing.performance_data.cpl{i}{ind};
+
+      tempouts = [interp1(cpu(:,1), cpu(:,2), uppers, "extrap"); interp1(cpl(:,1), cpl(:,2), lowers, "extrap")];
+      out = [out tempouts];
+    endfor
+    out = [fliplr(out) out];
+  else %interpolating for alphas that haven't been computed directly
+    lims = [find(plr(:,1)<alpha)(end) find(plr(:,1)>=alpha)(1)]
+    low = getColorMap(wing, lims(1));
+    high = getColorMap(wing, lims(2));
+    out = low + (high-low).*(alpha/(lims(2)-lims(1)));
+  endif
 endfunction
 
 function changerc(prop, val)
@@ -219,6 +247,7 @@ function updatePlot(obj, init = false)
       set(h.alpha_slider, "value", alpha);
       replot = true;
     case h.performance_button
+      set(h.colorbar, "visible", "on");
       disp("requesting performance")
       %h.wing.alphas = [-5 5 1];
       h.wing.performance_data = performance(wing, 50, wing.alphas, 0);
@@ -237,6 +266,8 @@ function updatePlot(obj, init = false)
   if replot
     wing=h.wing;
     if size(wing.performance_data.polar) > 0
+      colors = getColorMap(wing, alpha);
+      set(h.plot, "cdata", colors);
       pol=wing.performance_data.polar;
       %lin=find(pol(:,1)==alpha);
       %data=pol(lin, 2:5);

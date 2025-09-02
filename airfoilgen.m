@@ -12,7 +12,7 @@
 function out=airfoilgen(ident, varargin)
   meshpoints = 160;
   if nargin > 1
-    meshpoints = varargin{1}
+    meshpoints = varargin{1};
     if mod(meshpoints, 2) == 1
       meshpoints = ceil(meshpoints/2)*2;
       msg=sprintf("odd number of mesh points given, rounding to %.f\n", meshpoints);

@@ -31,6 +31,7 @@ function out=loadwingdata(in, meshpoints)
   xx=[];
   yy=[];
   zz=[];
+  chords=[];
   area=0; %initializing variable for planform wing area
   for i=1:size(file)(1)
     if length(file{i,1})>=4 && strcmpi(file{i,1}(1:4), "NACA") %Check for a valid airfoil section specification
@@ -41,6 +42,7 @@ function out=loadwingdata(in, meshpoints)
       sec.lsweep=-file{i,4};
       sec.vsweep=-file{i,5};
       sec.data=airfoilgen(sec.identifier, meshpoints);
+      chords=[chords sec.chord];
       if secnum==1
 	dxy=[0 0]; %change in XY coordinates based on sweep angles and chord positioning
 	sec.area=0;
@@ -70,4 +72,5 @@ function out=loadwingdata(in, meshpoints)
   out.alphas=[-12 12 1]; %default is starting at -12 degrees to 12 degrees at 1 degree intervals
   out.performance_data.polar=[];
   out.performance_data.raw=[];
+  out.chords=chords;
 endfunction
