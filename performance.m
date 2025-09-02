@@ -93,7 +93,7 @@ function data=performance(wing, varargin)
   %fix missing cp data
   for sec = 1:sections
     numlocalmissing = find(missing(:,1)==sec); %find all of the missing data points for this airfoil section only
-    localmissing = missing(numlocalmissing,2)
+    localmissing = missing(numlocalmissing,2);
     if length(localmissing) != 0
       goodcpus = []; %matrix for good cpu data points
       goodcpls = []; %matrix for good cpl data points
@@ -112,13 +112,16 @@ function data=performance(wing, varargin)
 	endif
       endfor
       for k = 1:length(localmissing) %now go fix the data points of the missing ones
-	j = localmissing(k)
+	j = localmissing(k);
 	data.cpu{sec}{j} = [xus interp1(goodalphas, goodcpus, alphas(j), "extrap")'];
 	data.cpl{sec}{j} = [xls interp1(goodalphas, goodcpls, alphas(j), "extrap")'];
-	[sec j]
       endfor
     endif
   endfor
+  if length(missing) != 0
+    msg = sprintf("filling %.f missing data points using linear extrapolation\n", size(missing)(1));
+    warning(msg);
+  endif
 
   data.polar=avg;
   data.alpha_l0=fzero(@(x) interp1(avg(:,1), avg(:,2), x)-0, -2); %find alpha where lift is 0
