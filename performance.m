@@ -135,8 +135,8 @@ function out = getSectionPerformance(in)
   fopen(insfid);	
   datname=["airdat" secname(end-6:end) ".txt"]; %Unique name for the to-be-created performance data file produced by xfoil
   cpname=["cpdat" secname(end-6:end) ".txt"]; %Unique name for the to-be-created cp data file produced by xfoil
-  fputs(insfid, [secid "\n" secname(end-6:end) "\noper\nvisc" num2str(Re) "\niter 100\npacc\n" datname "\n\nalfa " num2str(alpha) "\npacc\ncpwr " cpname "\n\nquit"]);
-  system(["xfoil < " insname], true);
+  fputs(insfid, ["plop\ng\n\n" secid "\noper\nvisc" num2str(Re) "\niter 100\npacc\n" datname "\n\nalfa " num2str(alpha) "\npacc\ncpwr " cpname "\n\nquit\n"]);
+  system(["xfoil < " insname " > /dev/null 2>&1"], true);
   plr=dlmread(datname, '', 12, 0); %Load xfoil's data into octave; columns 1-5 are [ ALPHA , CL , CD , CDp , CM ] (omits first 12 lines because they're a header output from XFOIL)
   length(plr);
   if length(plr) == 0
@@ -154,5 +154,5 @@ function out = getSectionPerformance(in)
     out.cpu = cpraw(1:cpxmini,:); %pressure coefficient distribution (upper surface)
     out.cpl = cpraw(cpxmini+1:end, :); %perssure coefficient distribution (lower surface)
   endif
-  delete(secname, cpname, insname, datname); %Get rid of all the temporary files that were just created
+  %delete(secname, cpname, insname, datname); %Get rid of all the temporary files that were just created
 endfunction
