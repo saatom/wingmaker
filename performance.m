@@ -40,6 +40,10 @@ function data=performance(wing, varargin)
   missing=[];
   c0=wing.sections{1}.chord; %initial chord length
   Re=rho*v_inf*c0/mu;
+  if Re > 4e6
+    msg = sprintf('Re will not converge for viscous analysis; switching to inviscid\n');
+    warning(msg);
+  endif
   q_inf=.5*rho*v_inf^2; %freestream dynamic pressure
   %v=Re/(rho*c0)*mu; %find air velocity
   data.cpu = {};
@@ -66,6 +70,10 @@ function data=performance(wing, varargin)
 	missing = [missing; i j];
       endif
     endfor
+
+    if length(rawdat) == 0
+      error(sprintf('all data points diverged for %s at Re = %.1e; please try again with a different V_inf\n', sect.identifier, sect.chord/c0*Re));
+    endif
 
     dat=[alphas];
     for j=2:5
@@ -135,10 +143,15 @@ function out = getSectionPerformance(in)
   fopen(insfid);	
   datname=["airdat" secname(end-6:end) ".txt"]; %Unique name for the to-be-created performance data file produced by xfoil
   cpname=["cpdat" secname(end-6:end) ".txt"]; %Unique name for the to-be-created cp data file produced by xfoil
-  fputs(insfid, ["plop\ng\n\n" secid "\noper\nvisc" num2str(Re) "\niter 100\npacc\n" datname "\n\nalfa " num2str(alpha) "\npacc\ncpwr " cpname "\n\nquit\n"]);
+  viscinstr = sprintf('\nvisc %.2e', Re);
+  if Re > 4e6
+    viscinstr = '';
+  endif
+
+  fputs(insfid, ["plop\ng\n\n" secid "\noper" viscinstr "\niter 100\npacc\n" datname "\n\nalfa " num2str(alpha) "\npacc\ncpwr " cpname "\n\nquit\n"]);
   system(["xfoil < " insname " > /dev/null 2>&1"], true);
   plr=dlmread(datname, '', 12, 0); %Load xfoil's data into octave; columns 1-5 are [ ALPHA , CL , CD , CDp , CM ] (omits first 12 lines because they're a header output from XFOIL)
-  length(plr);
+  #length(plr);
   if length(plr) == 0
     msg = sprintf("Xfoil diverged for %s at %.1f deg AoA, Re = %.1e\n", secid, alpha, Re);
     warning(msg);
@@ -154,5 +167,5 @@ function out = getSectionPerformance(in)
     out.cpu = cpraw(1:cpxmini,:); %pressure coefficient distribution (upper surface)
     out.cpl = cpraw(cpxmini+1:end, :); %perssure coefficient distribution (lower surface)
   endif
-  %delete(secname, cpname, insname, datname); %Get rid of all the temporary files that were just created
+  delete(secname, insname, datname); %Get rid of all the temporary files that were just created
 endfunction
